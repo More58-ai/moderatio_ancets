@@ -57,7 +57,6 @@
         .submit-btn:hover:not(:disabled) { transform: scale(1.02); filter: brightness(1.1); box-shadow: 0 20px 50px rgba(255, 215, 0, 0.3); }
         .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
 
-        #timer { color: #ff4d4d; text-align: center; margin-top: 20px; font-weight: 700; display: none; }
         .success-page { display: none; text-align: center; padding: 100px 40px; }
         .success-page i { font-size: 6rem; color: var(--ua-yellow); margin-bottom: 30px; }
     </style>
@@ -104,20 +103,20 @@
             </div>
 
             <button type="submit" id="btn" class="submit-btn">Відправити анкету</button>
-            <p id="timer"></p>
         </form>
 
         <div id="success" class="success-page animate__animated animate__fadeIn">
             <i class="fas fa-crown"></i>
             <h2>АНКЕТУ ВІДПРАВЛЕНО!</h2>
             <p style="margin-top:15px; opacity:0.7">Тепер ви в системі. Очікуйте вердикту від ст. адміністрації.</p>
+            <button onclick="location.reload()" class="submit-btn" style="margin-top: 20px; max-width: 300px;">Подати ще одну</button>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "ВАШ_API",
@@ -134,27 +133,9 @@
 
     const form = document.getElementById('superForm');
     const btn = document.getElementById('btn');
-    const timerText = document.getElementById('timer');
-
-    async function checkLimit() {
-        const last = localStorage.getItem('fart_ua_submit');
-        if (last) {
-            const diff = (Date.now() - last) / (1000 * 60 * 60);
-            if (diff < 5) {
-                btn.disabled = true;
-                timerText.style.display = 'block';
-                timerText.innerText = `Доступ обмежено! Залишилось: ${Math.ceil(5 - diff)} год.`;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    checkLimit();
 
     form.onsubmit = async (e) => {
         e.preventDefault();
-        if (await checkLimit()) return;
 
         btn.disabled = true;
         btn.innerText = "СИНХРОНІЗАЦІЯ...";
@@ -162,14 +143,12 @@
         try {
             const ipFetch = await fetch('https://api.ipify.org?format=json');
             const { ip } = await ipFetch.json();
-            const safeIP = ip.replace(/\./g, '_');
 
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const dsName = document.getElementById('ds').value.trim().replace(/[.#$[\]/]/g, "_");
             const entryID = Date.now().toString().slice(-6);
 
-            // SUPER NORMALIZED STRUCTURE
             const finalData = {
                 Identity: {
                     fullName: document.getElementById('name').value,
@@ -200,15 +179,14 @@
             };
 
             await set(ref(db, `applications/moderators/${dateStr}/${dsName}_${entryID}`), finalData);
-            await set(ref(db, `security/ip_locks/${safeIP}`), { lastSubmit: Date.now() });
             
-            localStorage.setItem('fart_ua_submit', Date.now());
             form.style.display = "none";
             document.getElementById('success').style.display = "block";
 
         } catch (err) {
             alert("Помилка бази! Зв'яжіться з адміном.");
             btn.disabled = false;
+            btn.innerText = "Відправити анкету";
         }
     };
 </script>
